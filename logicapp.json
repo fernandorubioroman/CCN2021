@@ -1,0 +1,127 @@
+{
+    "definition": {
+        "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+        "actions": {
+            "Copy_blob_(V2)": {
+                "inputs": {
+                    "headers": {
+                        "ReadFileMetadataFromServer": true
+                    },
+                    "host": {
+                        "connection": {
+                            "name": "@parameters('$connections')['azureblob_1']['connectionId']"
+                        }
+                    },
+                    "method": "post",
+                    "path": "/v2/datasets/@{encodeURIComponent(encodeURIComponent('AccountNameFromSettings'))}/copyFile",
+                    "queries": {
+                        "destination": "scheduledtasks/@{triggerBody()?['machinename']}@{body('Create_blob_(V2)')?['LastModified']}.csv",
+                        "overwrite": true,
+                        "queryParametersSingleEncoded": true,
+                        "source": "output-files/Scheduled Tasks/ScheduledTasks.csv"
+                    }
+                },
+                "runAfter": {
+                    "Delay": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "ApiConnection"
+            },
+            "Create_blob_(V2)": {
+                "inputs": {
+                    "body": "@body('HTTP')",
+                    "headers": {
+                        "ReadFileMetadataFromServer": true
+                    },
+                    "host": {
+                        "connection": {
+                            "name": "@parameters('$connections')['azureblob_1']['connectionId']"
+                        }
+                    },
+                    "method": "post",
+                    "path": "/v2/datasets/@{encodeURIComponent(encodeURIComponent('AccountNameFromSettings'))}/files",
+                    "queries": {
+                        "folderPath": "/input-files",
+                        "name": "@{triggerBody()?['machinename']}.zip",
+                        "queryParametersSingleEncoded": true
+                    }
+                },
+                "runAfter": {
+                    "HTTP": [
+                        "Succeeded"
+                    ]
+                },
+                "runtimeConfiguration": {
+                    "contentTransfer": {
+                        "transferMode": "Chunked"
+                    }
+                },
+                "type": "ApiConnection"
+            },
+            "Delay": {
+                "inputs": {
+                    "interval": {
+                        "count": 10,
+                        "unit": "Second"
+                    }
+                },
+                "runAfter": {
+                    "Create_blob_(V2)": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Wait"
+            },
+            "HTTP": {
+                "inputs": {
+                    "method": "GET",
+                    "uri": "@triggerBody()?['URL']"
+                },
+                "runAfter": {},
+                "type": "Http"
+            }
+        },
+        "contentVersion": "1.0.0.0",
+        "outputs": {},
+        "parameters": {
+            "$connections": {
+                "defaultValue": {},
+                "type": "Object"
+            }
+        },
+        "triggers": {
+            "manual": {
+                "inputs": {
+                    "schema": {
+                        "properties": {
+                            "SASToken": {
+                                "type": "string"
+                            },
+                            "URL": {
+                                "type": "string"
+                            },
+                            "machinename": {
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "kind": "Http",
+                "type": "Request"
+            }
+        }
+    },
+    "parameters": {
+        "$connections": {
+            "value": {
+                "azureblob_1": {
+                    "connectionId": "/subscriptions/<subscription id>/resourceGroups/<resource group>/providers/Microsoft.Web/connections/azureblob-1",
+                    "connectionName": "azureblob-1",
+                    "id": "/subscriptions//<subscription id>/providers/Microsoft.Web/locations/westeurope/managedApis/azureblob"
+                }
+            }
+        }
+    }
+}
